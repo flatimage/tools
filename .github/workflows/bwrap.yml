@@ -15,6 +15,7 @@ jobs:
 
       - name: Compile and extract artifacts from docker container
         run: |
+          sudo apt install jo jq
           mkdir -p dist
           for arch in x86_64; do
             docker build --platform "${arch}" -f bwrap.dockerfile -t bwrap:latest .
@@ -22,7 +23,11 @@ jobs:
               -v $(pwd):/workdir \
               bwrap:latest \
               cp /tools/bwrap/build/bwrap "/workdir/dist/bwrap-${arch}"
-           sha256sum ./dist/bwrap-${arch} | awk '{print $1}' > ./dist/bwrap-${arch}.sha256sum
+            SHA="$(sha256sum ./dist/bwrap-${arch} | awk '{print $1}')"
+            ./metadata.sh --version "$(./dist/bwrap-${arch} --version | awk '{print $2}')" \
+              --license LGPLv2+ "https://github.com/containers/bubblewrap/blob/main/LICENSE" \
+              --source https://github.com/containers/bubblewrap \
+              --sha "$SHA" > ./dist/bwrap-metadata.json
           done
 
       - name: Set permissions for dist directory

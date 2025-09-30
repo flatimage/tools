@@ -15,6 +15,7 @@ jobs:
 
       - name: Compile and extract artifacts from docker container
         run: |
+          sudo apt install jo jq
           mkdir -p dist
           for arch in x86_64; do
             docker build --platform "${arch}" -f busybox.dockerfile -t busybox:latest .
@@ -22,7 +23,11 @@ jobs:
               -v $(pwd):/workdir \
               busybox:latest \
               cp /tools/busybox/busybox "/workdir/dist/busybox-${arch}"
-           sha256sum ./dist/busybox-${arch} | awk '{print $1}' > ./dist/busybox-${arch}.sha256sum
+            SHA="$(sha256sum ./dist/busybox-${arch} | awk '{print $1}')"
+            ./metadata.sh --version "$(./dist/busybox-${arch} | head -1 | awk '{print $2}')" \
+              --license GPLv2 "https://www.busybox.net/license.html" \
+              --source "https://github.com/mirror/busybox.git" \
+              --sha "$SHA" > ./dist/busybox-metadata.json
           done
 
       - name: Set permissions for dist directory
