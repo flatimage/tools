@@ -1,0 +1,24 @@
+FROM alpine:latest
+
+RUN apk add git build-base libc++-static libpng-dev libpng-static libjpeg-turbo \
+  jpeg-dev libjpeg-turbo-dev libjpeg-turbo-static zlib-static libxml2 \
+  libxml2-dev libxml2-static xz-static
+
+# Clone repository
+RUN git clone https://github.com/flatimage/tools.git
+
+WORKDIR tools/imagemagick
+
+ENV LDFLAGS="-static"
+ENV CFLAGS="-no-pie --static -Wl,-static"
+ENV CXXFLAGS="-no-pie --static -Wl,-static"
+
+RUN ./configure --disable-shared --enable-static --without-threads \
+  --with-magick-plus-plus=no --with-modules=yes --enable-hdri=no \
+  --with-png=yes --with-jpeg=yes --with-xml=yes
+
+RUN make -j"$(nproc)"
+
+RUN mkdir -p /dist && cp utilities/magick /dist
+
+RUN strip -s -R .comment -R .gnu.version --strip-unneeded /dist/magick

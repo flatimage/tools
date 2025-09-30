@@ -1,0 +1,64 @@
+name: bash
+on: [workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      ssha: ${{ steps.ssha.outputs.ssha }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Compile and extract artifacts from docker container
+        run: |
+          mkdir -p dist
+          for arch in x86_64; do
+            docker build --platform "${arch}" -f bash.dockerfile -t bash:latest .
+            docker run --rm --platform "${arch}" \
+              -v $(pwd):/workdir \
+              bash:latest \
+              cp /dist/bash "/workdir/dist/bash-${arch}"
+           sha256sum ./dist/bash-${arch} | awk '{print $1}' > ./dist/bash-${arch}.sha256sum
+          done
+
+      - name: Set permissions for dist directory
+        run: |
+          sudo chown -R "$(id -u)":"$(id -g)" dist/
+          sudo chmod -R 755 dist/
+
+      - name: Upload artifacts to release
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: 'dist'
+
+      - name: Compute Short SHA
+        id: ssha
+        run: |
+          echo "ssha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+
+  release:
+    permissions: write-all
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=${GITHUB_SHA::7}
+          # Create release if it doesn't exist; ignore error if it does
+          gh release create "$TAG" --title "Release $TAG" --notes "Automated" --target "$GITHUB_SHA" || true
+          # Upload/replace the asset(s)
+          gh release upload "$TAG" bash-* --clobber

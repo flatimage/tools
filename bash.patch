@@ -1,0 +1,31 @@
+diff --git a/bash/shell.c b/bash/shell.c
+index e59029c..53c271f 100644
+--- a/bash/shell.c
++++ b/bash/shell.c
+@@ -1136,11 +1136,22 @@ execute_bashrc_file (void)
+   maybe_execute_file (SYS_BASHRC, 1);
+ #  endif
+ #endif
+-
+-  if (bashrc_file)
+-    maybe_execute_file (bashrc_file, 1);
++  char* ptr_env_bashrc = getenv("BASHRC_FILE");
++  if ( ptr_env_bashrc )
++  {
++		maybe_execute_file (ptr_env_bashrc, 1);
++  }
+   else
+-    maybe_execute_file (DEFAULT_BASHRC, 1);
++  {
++		if (bashrc_file)
++		{
++			maybe_execute_file (bashrc_file, 1);
++		}
++		else
++		{
++			maybe_execute_file (DEFAULT_BASHRC, 1);
++		}
++  }
+ }
+ 
+ static void
