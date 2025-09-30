@@ -15,6 +15,7 @@ jobs:
 
       - name: Compile and extract artifacts from docker container
         run: |
+          sudo apt install jo jq
           mkdir -p dist
           for arch in x86_64; do
             docker build --platform "${arch}" -f ciopfs.dockerfile -t ciopfs:latest .
@@ -22,7 +23,11 @@ jobs:
               -v $(pwd):/workdir \
               ciopfs:latest \
               cp /tools/ciopfs/ciopfs "/workdir/dist/ciopfs-${arch}"
-           sha256sum ./dist/ciopfs-${arch} | awk '{print $1}' > ./dist/ciopfs-${arch}.sha256sum
+            SHA="$(sha256sum ./dist/ciopfs-${arch} | awk '{print $1}')"
+            ./metadata.sh --version "$(2>&1 ./dist/ciopfs-${arch} --version | awk '{print $2}')" \
+              --license GPLv2 "https://github.com/martanne/ciopfs/blob/master/ciopfs.c" \
+              --source "https://github.com/martanne/ciopfs" \
+              --sha "$SHA" > ./dist/ciopfs-metadata.json
           done
 
       - name: Set permissions for dist directory

@@ -15,6 +15,7 @@ jobs:
 
       - name: Compile and extract artifacts from docker container
         run: |
+          sudo apt install jo jq
           mkdir -p dist
           for arch in x86_64; do
             docker build --platform "${arch}" -f bash.dockerfile -t bash:latest .
@@ -22,7 +23,11 @@ jobs:
               -v $(pwd):/workdir \
               bash:latest \
               cp /dist/bash "/workdir/dist/bash-${arch}"
-           sha256sum ./dist/bash-${arch} | awk '{print $1}' > ./dist/bash-${arch}.sha256sum
+            SHA="$(sha256sum ./dist/bash-${arch} | awk '{print $1}')"
+            ./metadata.sh --version "$(./dist/bash-${arch} --version | head -n1 | awk '{print $4}')" \
+              --license GPL-3.0 "https://www.gnu.org/licenses/gpl.html" \
+              --source "http://ftpmirror.gnu.org/gnu/bash/bash-5.3.tar.gz" \
+              --sha "$SHA"  > ./dist/bash-metadata.json
           done
 
       - name: Set permissions for dist directory

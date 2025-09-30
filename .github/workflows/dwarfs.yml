@@ -15,6 +15,7 @@ jobs:
 
       - name: Compile and extract artifacts from docker container
         run: |
+          sudo apt install jo jq
           mkdir -p dist
           # for arch in x86_64; do
           #   docker build --platform "${arch}" -f dwarfs.dockerfile -t dwarfs:latest .
@@ -27,7 +28,13 @@ jobs:
           # Just copy the pre-built for now
           for arch in x86_64; do
             wget -O ./dist/dwarfs_aio-${arch} https://github.com/mhx/dwarfs/releases/download/v0.13.0/dwarfs-universal-0.13.0-Linux-${arch}
-            sha256sum ./dist/dwarfs_aio-${arch} | awk '{print $1}' > ./dist/dwarfs_aio-${arch}.sha256sum
+            chmod +x ./dist/dwarfs_aio-${arch}
+            SHA=$(sha256sum ./dist/dwarfs_aio-${arch} | awk '{print $1}')
+            ./metadata.sh --version "$(./dist/dwarfs_aio-${arch} --version | grep -m1 dwarfs-universal | awk '{print $2}' | sed  's/(v/v/')" \
+              --license MIT "https://github.com/mhx/dwarfs/blob/main/LICENSE" \
+              --license GPL-3.0 "https://github.com/mhx/dwarfs/blob/main/LICENSE.GPL-3.0" \
+              --source "https://github.com/mhx/dwarfs" \
+              --sha "$SHA" > ./dist/dwarfs_aio-metadata.json
           done
 
       - name: Set permissions for dist directory

@@ -15,6 +15,7 @@ jobs:
 
       - name: Compile and extract artifacts from docker container
         run: |
+          sudo apt install jo jq
           mkdir -p dist
           for arch in x86_64; do
             docker build --platform "${arch}" -f unionfs.dockerfile -t unionfs:latest .
@@ -22,7 +23,11 @@ jobs:
               -v $(pwd):/workdir \
               unionfs:latest \
               cp /dist/unionfs "/workdir/dist/unionfs-${arch}"
-           sha256sum ./dist/unionfs-${arch} | awk '{print $1}' > ./dist/unionfs-${arch}.sha256sum
+            SHA="$(sha256sum ./dist/unionfs-${arch} | awk '{print $1}')"
+            ./metadata.sh --version "$(./dist/unionfs-${arch} --version | head -n1 | awk '{print $3}')" \
+              --license "BSD-3-clause" "https://github.com/rpodgorny/unionfs-fuse/blob/master/LICENSE" \
+              --source "https://github.com/rpodgorny/unionfs-fuse" \
+              --sha "$SHA" > ./dist/unionfs-metadata.json
           done
 
       - name: Set permissions for dist directory
